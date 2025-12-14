@@ -1,0 +1,13 @@
+Analyze the following web page content and extract structured information.
+
+URL: {url}
+Title: {title}
+
+Content:
+{content}
+
+Classify this page as one of: article, product, forum_post, directory, other
+Then use the post_page_content tool ONCE to submit the extracted data.
+Include the title and url in the page_data.
+
+IMPORTANT: For product pages, the "features" and "options" fields must be arrays of strings, not objects.

@@ -1,0 +1,8 @@
+Synthesize the following research into a comprehensive response.
+
+Original research question: {original_query}
+
+Gathered content:
+{content_parts}
+
+{requirements}

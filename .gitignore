@@ -1,0 +1,6 @@
+.env
+.devcontainer
+__pycache__
+*egg-info
+node_modules
+dist

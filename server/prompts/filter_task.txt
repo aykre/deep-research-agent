@@ -1,0 +1,9 @@
+Original research query: {query}
+
+Search results to evaluate:
+{results_text}
+
+Analyze each title for relevance to the query and provide relevance scores.
+Only include results with scores of 0.5 or higher in your JSON output.
+
+Output your analysis as JSON:

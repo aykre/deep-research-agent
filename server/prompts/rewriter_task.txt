@@ -1,0 +1,45 @@
+Original research question: {original_query}
+
+Queries already executed:
+{queries_executed}
+
+Content gathered so far:
+{content_summary}
+
+YOUR ANALYSIS PROCESS:
+
+1. COVERAGE ANALYSIS
+   - What types of sources have we found? (marketplaces, blogs, news, comparisons, etc.)
+   - What's MISSING? (important sources, dimensions, entities not yet explored)
+   - Are we stuck on a narrow set of sources?
+
+2. STRATEGIC DECISION
+   - Should we STOP (sufficient coverage) or CONTINUE (gaps remain)?
+   - Does this topic require recent/current information?
+
+3. QUERY GENERATION (if continuing)
+   - Generate up to 3 strategic queries using the prioritized strategies
+   - Focus on filling gaps and expanding coverage
+   - Include appropriate time filters if topic requires recency
+
+EXAMPLES OF STRATEGIC QUERIES:
+
+For "iPhone 16 refurbished price":
+- Meta-query: "best refurbished iPhone marketplaces 2025"
+- Specific: "iPhone 16 refurbished BackMarket price"
+- Comparison: "iPhone 16 refurbished vs new price difference"
+
+For "best programming language for data science":
+- Meta-query: "data science programming language comparison 2025"
+- Entity: "Python for data science pros and cons"
+- Alternative: "R vs Python data analysis which to choose"
+
+OUTPUT JSON FORMAT:
+
+{{"action": "stop", "reason": "brief explanation of why sufficient"}}
+
+OR
+
+{{"action": "continue", "requires_recency": true/false, "coverage_gaps": ["gap1", "gap2"], "queries": [{{"query": "search terms", "time_filter": "d"|"w"|"m"|"y"|null, "strategy": "source_discovery"|"dimension_expansion"|"entity"|"comparison"|"alternative"|"time_based"}}, ...]}}
+
+Your JSON response:

@@ -1,0 +1,5 @@
+Evaluate the following research query for safety and appropriateness:
+
+Query: {query}
+
+Determine if this query should be accepted or rejected based on the content safety guidelines.
