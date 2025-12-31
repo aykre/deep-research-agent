@@ -44,7 +44,7 @@ async def scrape_page_with_beautifulsoup(url: str, timeout: int = 10) -> str:
         # Get text content
         content = soup.get_text(separator=" ", strip=True)
 
-        return content[:10000]  # Limit to 10k chars
+        return content
 
 
 async def scrape_page_with_playwright(
@@ -67,12 +67,23 @@ async def scrape_page_with_playwright(
         page = await context.new_page()
 
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
-
+            try:
+                response = await page.goto(
+                    url, wait_until="domcontentloaded", timeout=timeout
+                )
+            except Exception:
+                raise Exception("Scrape error")
+            if response.status != 200:
+                raise Exception(f"Response was {response.status}")
             # Get text content
+            await page.evaluate("""
+                document.querySelectorAll('header, footer')
+                .forEach(el => el.remove());
+            """)
             content = await page.inner_text("body")
 
-            return content[:10000]  # Limit to 10k chars
+            return content
+
         finally:
             await context.close()
 

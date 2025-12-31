@@ -52,6 +52,7 @@ OPENAI_API_KEY=your_openai_api_key
 MAX_REWRITTEN_QUERIES=9
 MAX_RESULTS_PER_QUERY=10
 MAX_RESULTS_FILTERED=3
+MAX_CHARACTERS_PER_PAGE=3000
 
 # Optional: Scraper configuration
 USE_PLAYWRIGHT=true
@@ -67,6 +68,7 @@ REWRITER_LLM_MODEL=gpt-5-mini
 REWRITER_REASONING_EFFORT=medium
 
 # Extractor (content extraction)
+USE_EXTRACTION=false
 EXTRACTOR_LLM_MODEL=gpt-5-nano
 EXTRACTOR_REASONING_EFFORT=low
 
@@ -97,6 +99,7 @@ VITE_TURNSTILE_SITE_KEY=your_site_key
 - `MAX_REWRITTEN_QUERIES`: Number of follow-up query iterations (default: 9)
 - `MAX_RESULTS_PER_QUERY`: Search results to fetch per query (default: 10)
 - `MAX_RESULTS_FILTERED`: Results to keep after relevance filtering (default: 3)
+- `MAX_CHARACTERS_PER_PAGE`: The maximum number of characters from each page to pass to the LLM at various stages (default: 3000)
 
 ### Scraping Options
 
@@ -117,6 +120,7 @@ Configure task-specific models and reasoning effort levels:
 - `REWRITER_REASONING_EFFORT`: Reasoning effort level (default: medium)
 
 #### Extractor (Content Extraction)
+- `USE_EXTRACTION`: Set to "true" to enable LLM-based content extraction (default: false)
 - `EXTRACTOR_LLM_MODEL`: Model for extracting structured content from web pages (default: gpt-5-mini)
 - `EXTRACTOR_REASONING_EFFORT`: Reasoning effort level (default: low)
 

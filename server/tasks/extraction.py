@@ -6,7 +6,12 @@ from typing import Any
 from langgraph.config import get_stream_writer
 from langgraph.func import task
 
-from server.config import EXTRACTOR_LLM_MODEL, EXTRACTOR_REASONING_EFFORT, USE_PLAYWRIGHT
+from server.config import (
+    EXTRACTOR_LLM_MODEL,
+    EXTRACTOR_REASONING_EFFORT,
+    USE_PLAYWRIGHT,
+    MAX_CHARACTERS_PER_PAGE,
+)
 from server.models import (
     ArticleContent,
     DirectoryContent,
@@ -19,7 +24,11 @@ from server.models import (
 from server.prompts import load_prompt
 from server.services.scraper import scrape_page
 from server.utils.logging_config import get_logger
-from server.utils.util import call_llm_with_cancel_raw, create_task_llm, create_llm_messages
+from server.utils.util import (
+    call_llm_with_cancel_raw,
+    create_task_llm,
+    create_llm_messages,
+)
 
 logger = get_logger(__name__)
 
@@ -143,7 +152,7 @@ async def _extract_content_with_llm(
         Tuple of (extracted_content, error, cancelled)
     """
     # Reduce content size for faster processing
-    truncated_content = raw_content[:8000]
+    truncated_content = raw_content[:MAX_CHARACTERS_PER_PAGE]
     logger.info("Truncated content", characters=len(truncated_content))
 
     llm = create_task_llm(EXTRACTOR_LLM_MODEL, EXTRACTOR_REASONING_EFFORT)
@@ -159,7 +168,9 @@ async def _extract_content_with_llm(
     messages = create_llm_messages(system_prompt, task_prompt)
 
     logger.info("Sending extraction request to LLM", url=url)
-    response, cancelled = await call_llm_with_cancel_raw(stop_flag, llm_with_tools, messages)
+    response, cancelled = await call_llm_with_cancel_raw(
+        stop_flag, llm_with_tools, messages
+    )
 
     if cancelled:
         return None, None, True
@@ -182,7 +193,9 @@ async def _extract_content_with_llm(
         return None, "No content extracted by LLM", False
 
 
-def create_extracted_content(page_type: str, page_data: dict[str, Any]) -> ExtractedContent:
+def create_extracted_content(
+    page_type: str, page_data: dict[str, Any]
+) -> ExtractedContent:
     """Factory function to create the right content type."""
     # Ensure required fields
     title = page_data.get("title", "Untitled")
@@ -336,11 +349,18 @@ async def scrape_and_extract_task(
             logger.error("Extraction timed out", url=url)
             result["extraction_error"] = "Extraction timed out after 60 seconds"
         except Exception as extract_error:
-            logger.error("Extraction failed", url=url, error=str(extract_error), exc_info=True)
+            logger.error(
+                "Extraction failed", url=url, error=str(extract_error), exc_info=True
+            )
             result["extraction_error"] = f"Extraction failed: {str(extract_error)}"
 
     except Exception as e:
-        logger.error("Unexpected error in scrape_and_extract_task", url=url, error=str(e), exc_info=True)
+        logger.error(
+            "Unexpected error in scrape_and_extract_task",
+            url=url,
+            error=str(e),
+            exc_info=True,
+        )
         result["success"] = False
         result["error"] = f"Unexpected error: {str(e)}"
 

@@ -6,6 +6,7 @@ import type {
   Stage,
   SearchAndFilterStartedData,
   SearchAndFilterCompletedData,
+  SearchAndFilterFailed,
   ScrapeStartedData,
   ScrapeCompleteData,
   ExtractionStartedData,
@@ -195,6 +196,17 @@ export function useResearchSocket(options?: { onNeedTokenRefresh?: () => void })
               prev.map((stage) =>
                 stage.id === eventData.stage_id
                   ? { ...stage, status: "completed" as const }
+                  : stage
+              )
+            );
+            break;
+          }
+          case "search_and_filter_failed": {
+            const eventData = data.data as unknown as SearchAndFilterFailed;
+            setStages((prev) =>
+              prev.map((stage) =>
+                stage.id === eventData.stage_id
+                  ? { ...stage, status: "failed" as const, error: eventData.error }
                   : stage
               )
             );

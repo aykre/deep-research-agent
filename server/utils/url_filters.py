@@ -12,6 +12,8 @@ AD_PATTERNS = [
     r"click\..*",
     r"tracker\..*",
     r"affiliate\..*",
+    r"youtube\.com",
+    r"youtu\.be",
 ]
 
 # Compile patterns for efficiency

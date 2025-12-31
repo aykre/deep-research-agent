@@ -5,7 +5,11 @@ from typing import Any
 
 from langgraph.func import task
 
-from server.config import WRITER_LLM_MODEL, WRITER_REASONING_EFFORT
+from server.config import (
+    WRITER_LLM_MODEL,
+    WRITER_REASONING_EFFORT,
+    MAX_CHARACTERS_PER_PAGE,
+)
 from server.prompts import load_prompt
 from server.utils.util import create_task_llm, create_llm_messages, parse_content
 
@@ -37,7 +41,7 @@ async def write_response_task(
         if content_dict.get("name"):
             part += f"Name: {content_dict['name']}\n"
         if content_dict.get("content"):
-            part += f"Content: {content_dict['content'][:1000]}\n"
+            part += f"Content: {content_dict['content'][:MAX_CHARACTERS_PER_PAGE]}\n"
         elif content_dict.get("description"):
             part += f"Description: {content_dict['description']}\n"
         if content_dict.get("options"):

@@ -70,6 +70,20 @@ def parse_content(response) -> str:
     else:
         content = response.content.strip()  # type: ignore
 
+    if content == "":
+        meta = response.response_metadata
+
+        if meta.get("status") != "completed":
+            reason = None
+            if "incomplete_details" in meta:
+                reason = meta["incomplete_details"].get("reason")
+
+            raise RuntimeError(
+                f"LLM response not completed (status={meta.get('status')}, reason={reason})"
+            )
+
+        raise RuntimeError("LLM returned empty response")
+
     return content
 
 

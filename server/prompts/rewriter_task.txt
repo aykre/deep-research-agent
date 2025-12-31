@@ -22,6 +22,10 @@ YOUR ANALYSIS PROCESS:
    - Focus on filling gaps and expanding coverage
    - Include appropriate time filters if topic requires recency
 
+SUFFICIENT COVERAGE:
+
+There is sufficient coverage if the question has been answered and the topic does not require further research. If the question is something like "What is X?" and the research has already provided an answer, then return a STOP.
+
 EXAMPLES OF STRATEGIC QUERIES:
 
 For "iPhone 16 refurbished price":
@@ -36,10 +40,10 @@ For "best programming language for data science":
 
 OUTPUT JSON FORMAT:
 
-{{"action": "stop", "reason": "brief explanation of why sufficient"}}
+{{"action": "stop"}}
 
 OR
 
-{{"action": "continue", "requires_recency": true/false, "coverage_gaps": ["gap1", "gap2"], "queries": [{{"query": "search terms", "time_filter": "d"|"w"|"m"|"y"|null, "strategy": "source_discovery"|"dimension_expansion"|"entity"|"comparison"|"alternative"|"time_based"}}, ...]}}
+{{"action": "continue", "requires_recency": true/false, "queries": [{{"query": "search terms", "time_filter": "d"|"w"|"m"|"y"|null, "strategy": "source_discovery"|"dimension_expansion"|"entity"|"comparison"|"alternative"|"time_based"}}, ...]}}
 
 Your JSON response:

@@ -17,8 +17,7 @@ You must output valid JSON with the following structure:
       "snippet": "exact snippet",
       "relevance_score": 0.85
     }}
-  ],
-  "filtering_summary": "Brief explanation of filtering decisions"
+  ]
 }}
 
 Only include results with relevance scores of 0.5 or higher.

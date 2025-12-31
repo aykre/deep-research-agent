@@ -11,22 +11,18 @@ from server.utils.util import (
     parse_json_response,
 )
 from server.config import REWRITER_LLM_MODEL, REWRITER_REASONING_EFFORT
-from server.models import ExtractedContent, QueryWithFilter, RewriterOutput
+from server.models import SearchResult, QueryWithFilter, RewriterOutput
 from server.prompts import load_prompt
 
 
-def _build_content_summary(content_list: list[ExtractedContent]) -> str:
+def _build_content_summary(searches: list[SearchResult]) -> str:
     """Build a summary of extracted content for the rewriter."""
-    if not content_list:
+    if not searches:
         return "No content gathered yet."
 
     summaries = []
-    for c in content_list:
-        summary = f"- [{c.title}]: {c.page_type}"
-        if hasattr(c, "content") and c.content:  # type: ignore
-            summary += f" - {c.content[:200]}..."  # type: ignore
-        elif hasattr(c, "description") and c.description:  # type: ignore
-            summary += f" - {c.description[:200]}..."  # type: ignore
+    for c in searches:
+        summary = f"- [{c.title}]: {c.snippet[:250]}"
         summaries.append(summary)
     return "\n".join(summaries)
 
@@ -92,7 +88,9 @@ async def rewrite_queries_task(
                     )
                 )
             elif isinstance(q, str):
-                queries.append(QueryWithFilter(query=q, time_filter=None, strategy=None))
+                queries.append(
+                    QueryWithFilter(query=q, time_filter=None, strategy=None)
+                )
 
         return RewriterOutput(
             action="continue",

@@ -21,6 +21,7 @@ from server.config import (
     MAX_RESULTS_PER_QUERY,
     USE_PLAYWRIGHT,
     USE_GUARDRAILS,
+    USE_EXTRACTION,
 )
 from server.models import ExtractedContent, SearchResult
 from server.services.browser_pool import get_browser_pool
@@ -44,6 +45,7 @@ class ResearchState:
     request_id: str
     connection_id: str
     seen_urls: list[str] = field(default_factory=list)
+    searches: list[dict] = field(default=dict)
     extracted_content: list[ExtractedContent] = field(default_factory=list)
     queries_executed: list[str] = field(default_factory=list)
     total_rewritten_queries: int = 0
@@ -154,7 +156,9 @@ async def _search_and_filter(
 
         # Filter search results by title relevance
         if new_results:
-            logger.info("Filtering new results", query=query, result_count=len(new_results))
+            logger.info(
+                "Filtering new results", query=query, result_count=len(new_results)
+            )
             filter_output, cancelled = await filter_search_results_by_titles(
                 query, new_results, stop_flag
             )
@@ -181,7 +185,9 @@ async def _search_and_filter(
                     "relevant_count": len(filter_output.relevant_results),
                     "filtered_out": filter_output.filtered_out,
                     "avg_relevance_score": filter_output.avg_relevance_score,
-                    "results": [fr.model_dump() for fr in filter_output.relevant_results],
+                    "results": [
+                        fr.model_dump() for fr in filter_output.relevant_results
+                    ],
                 },
                 check_stop,
             )
@@ -204,7 +210,9 @@ async def _search_and_filter(
             )
             return [], []
     except Exception as e:
-        logger.error("Search and filter failed", query=query, error=str(e), exc_info=True)
+        logger.error(
+            "Search and filter failed", query=query, error=str(e), exc_info=True
+        )
         _emit_event(
             "search_and_filter_failed",
             {"stage_id": stage_id, "query": query, "error": str(e)},
@@ -232,7 +240,11 @@ async def _scrape_and_extract_results(
     stop_flag: Dictionary containing stop flag for cancellation
     """
     try:
-        logger.info("Starting scrape and extract batch", url_count=len(results))
+        logger.info(
+            "Starting scrape and extract batch",
+            url_count=len(results),
+            use_extraction=USE_EXTRACTION,
+        )
         # Emit scrape_started for all results upfront
         for result in results:
             stage_id = f"scrape_{result.url}"
@@ -241,18 +253,98 @@ async def _scrape_and_extract_results(
                 {"stage_id": stage_id, "url": result.url, "title": result.title},
             )
 
+        # If extraction is disabled, just scrape without extraction
+        if not USE_EXTRACTION:
+            from server.services.scraper import scrape_page
+            from server.models import OtherContent
+
+            logger.info("Extraction disabled, scraping pages without LLM extraction")
+
+            async def scrape_job(result: SearchResult) -> dict:
+                """Scrape a single URL and return result dict."""
+                scrape_stage_id = f"scrape_{result.url}"
+                try:
+                    content = await scrape_page(
+                        result.url, use_playwright=USE_PLAYWRIGHT
+                    )
+                    if content:
+                        # Create basic OtherContent with scraped content
+                        extracted = OtherContent(
+                            title=result.title,
+                            url=result.url,
+                            content=content,  # Truncate like extraction does
+                        )
+                        return {
+                            "success": True,
+                            "url": result.url,
+                            "title": result.title,
+                            "stage_id": scrape_stage_id,
+                            "extracted": extracted,
+                        }
+                    else:
+                        return {
+                            "success": False,
+                            "url": result.url,
+                            "title": result.title,
+                            "stage_id": scrape_stage_id,
+                            "error": "No content scraped",
+                        }
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "url": result.url,
+                        "title": result.title,
+                        "stage_id": scrape_stage_id,
+                        "error": str(e),
+                    }
+
+            # Launch all scrape tasks in parallel
+            scrape_jobs = [
+                asyncio.create_task(scrape_job(result)) for result in results
+            ]
+
+            # Process results as they complete
+            for task_future in asyncio.as_completed(scrape_jobs):
+                task_result = await task_future
+
+                if task_result["success"]:
+                    state.extracted_content.append(task_result["extracted"])
+                    logger.info("Successfully scraped page", url=task_result["url"])
+                    _emit_event(
+                        "scrape_complete",
+                        {
+                            "stage_id": task_result["stage_id"],
+                            "url": task_result["url"],
+                            "success": True,
+                        },
+                        check_stop,
+                    )
+                else:
+                    logger.warning("Failed to scrape page", url=task_result["url"])
+                    _emit_event(
+                        "scrape_complete",
+                        {
+                            "stage_id": task_result["stage_id"],
+                            "url": task_result["url"],
+                            "success": False,
+                            "error": task_result.get("error"),
+                        },
+                        check_stop,
+                    )
+            return
+
         # Launch all scrape/extract tasks in parallel
-        scrape_tasks = []
+        scrape_jobs = []
         for result in results:
             task = scrape_and_extract_task(
                 result.url,
                 result.title,
                 stop_flag,
             )
-            scrape_tasks.append(task)
+            scrape_jobs.append(task)
 
         # Process results as they complete
-        for task_future in asyncio.as_completed(scrape_tasks):
+        for task_future in asyncio.as_completed(scrape_jobs):
             task_result, cancelled = await task_future
 
             extraction_stage_id = f"extract_{task_result['url']}"
@@ -305,7 +397,9 @@ async def _scrape_and_extract_results(
                         )
                     else:
                         # Content quality check failed
-                        logger.info("Filtered out low-quality content", url=task_result["url"])
+                        logger.info(
+                            "Filtered out low-quality content", url=task_result["url"]
+                        )
                         _emit_event(
                             "extraction_complete",
                             {
@@ -322,7 +416,9 @@ async def _scrape_and_extract_results(
                         "extraction_error", "No content extracted"
                     )
                     logger.warning(
-                        "Extraction failed for URL", url=task_result["url"], error=extraction_error
+                        "Extraction failed for URL",
+                        url=task_result["url"],
+                        error=extraction_error,
                     )
                     _emit_event(
                         "extraction_complete",
@@ -363,13 +459,22 @@ async def _process_rewritten_query(
 
     stage_id = f"search_filter_{query_index}"
     filtered_results, new_urls = await _search_and_filter(
-        new_query, max_results, seen_urls_set, time_filter, stage_id, check_stop, stop_flag
+        new_query,
+        max_results,
+        seen_urls_set,
+        time_filter,
+        stage_id,
+        check_stop,
+        stop_flag,
     )
 
     if check_stop():
-        return {"query": new_query, "filtered_results": [], "new_urls": [], "success": False}
-
-    # NOTE: Scraping moved to _iterative_query_rewriting after state update
+        return {
+            "query": new_query,
+            "filtered_results": [],
+            "new_urls": [],
+            "success": False,
+        }
 
     return {
         "query": new_query,
@@ -402,7 +507,7 @@ async def _update_state_from_batch(
             if result["success"]:
                 state.queries_executed.append(result["query"])
                 state.total_rewritten_queries += 1
-
+                state.searches.extend(result["filtered_results"])
                 # Add new URLs to seen_urls under lock
                 for url in result["new_urls"]:
                     if url not in state.seen_urls:  # Double-check for safety
@@ -451,7 +556,7 @@ async def _iterative_query_rewriting(
             queries_executed=len(state.queries_executed),
             content_sources=len(state.extracted_content),
         )
-        content_summary = _build_content_summary(state.extracted_content)
+        content_summary = _build_content_summary(state.searches)
         rewrite_stage_id = f"rewriter_{len(state.queries_executed)}"
 
         # Emit rewriter_started event
@@ -483,7 +588,8 @@ async def _iterative_query_rewriting(
                     "action": "stop",
                     "queries_count": len(rewriter_output.queries),
                     "queries": [
-                        {"query": q.query, "strategy": q.strategy} for q in rewriter_output.queries
+                        {"query": q.query, "strategy": q.strategy}
+                        for q in rewriter_output.queries
                     ],
                 },
             )
@@ -501,7 +607,8 @@ async def _iterative_query_rewriting(
                 "action": "continue",
                 "queries_count": len(rewriter_output.queries),
                 "queries": [
-                    {"query": q.query, "strategy": q.strategy} for q in rewriter_output.queries
+                    {"query": q.query, "strategy": q.strategy}
+                    for q in rewriter_output.queries
                 ],
             },
         )
@@ -523,7 +630,12 @@ async def _iterative_query_rewriting(
             query_index = state.total_rewritten_queries + idx
             stage_id = f"search_filter_{query_index}"
             task = _process_rewritten_query(
-                query_with_filter, state, max_results, query_index, check_stop, stop_flag
+                query_with_filter,
+                state,
+                max_results,
+                query_index,
+                check_stop,
+                stop_flag,
             )
             tasks.append(task)
             task_metadata.append((stage_id, query_with_filter.query))
@@ -535,7 +647,12 @@ async def _iterative_query_rewriting(
         successful_results = []
         for i, result in enumerate(batch_results):
             if isinstance(result, Exception):
-                logger.error("Query execution failed", index=i, error=str(result), exc_info=result)
+                logger.error(
+                    "Query execution failed",
+                    index=i,
+                    error=str(result),
+                    exc_info=result,
+                )
                 stage_id, failed_query = task_metadata[i]
                 _emit_event(
                     "search_and_filter_failed",
@@ -565,9 +682,12 @@ async def _iterative_query_rewriting(
         # Now scrape all results in one batch (already deduplicated)
         if results_to_scrape and not check_stop():
             logger.info(
-                "Scraping deduplicated URLs from batch", url_count=len(results_to_scrape)
+                "Scraping deduplicated URLs from batch",
+                url_count=len(results_to_scrape),
             )
-            await _scrape_and_extract_results(results_to_scrape, state, check_stop, stop_flag)
+            await _scrape_and_extract_results(
+                results_to_scrape, state, check_stop, stop_flag
+            )
         else:
             logger.info("No new results to scrape in this batch")
 
@@ -618,6 +738,8 @@ async def _generate_final_response(
                 content_dicts,
                 requires_recency,
             )
+
+            logger.info("Response", content=final_response)
 
             logger.info("Final response generated successfully")
             _emit_event("writing_complete", {"stage_id": stage_id})
@@ -746,6 +868,7 @@ async def research_workflow(inputs: dict[str, Any]) -> dict[str, Any]:
         # Add new URLs to state
         state.seen_urls.extend(new_urls)
         state.queries_executed.append(query)
+        state.searches = initial_results
         logger.info("Initial search complete", result_count=len(initial_results))
 
         if check_stop():
@@ -761,7 +884,8 @@ async def research_workflow(inputs: dict[str, Any]) -> dict[str, Any]:
         )
 
         logger.info(
-            "Query rewriting phase complete", content_sources=len(state.extracted_content)
+            "Query rewriting phase complete",
+            content_sources=len(state.extracted_content),
         )
         final_response = await _generate_final_response(state, requires_recency)
         _emit_progress(max_queries + 2, max_queries + 2)

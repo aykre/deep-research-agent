@@ -29,6 +29,12 @@ export interface SearchAndFilterCompletedData {
   results: SearchResult[];
 }
 
+export interface SearchAndFilterFailed {
+  stage_id: string;
+  query: string;
+  error: string;
+}
+
 export interface ScrapeStartedData {
   stage_id: string;
   url: string;

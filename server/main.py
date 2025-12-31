@@ -88,7 +88,7 @@ async def research_websocket(websocket: WebSocket):
             raise
         except Exception as e:
             logger.error("Research workflow failed", error=str(e), exc_info=True)
-
+            await send_event("stopped", {"data": {}})
             await send_event("error", {"message": f"Research workflow error: {str(e)}"})
 
             # Set stop flag to cancel workflow
@@ -151,7 +151,8 @@ async def research_websocket(websocket: WebSocket):
                         writing_in_progress=True,
                     )
                     await send_event(
-                        "error", {"message": "Cannot stop research while writing response"}
+                        "error",
+                        {"message": "Cannot stop research while writing response"},
                     )
                 else:
                     logger.info("User stopped research")

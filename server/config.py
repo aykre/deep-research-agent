@@ -4,6 +4,7 @@ import os
 MAX_REWRITTEN_QUERIES = int(os.getenv("MAX_REWRITTEN_QUERIES", "3"))
 MAX_RESULTS_PER_QUERY = int(os.getenv("MAX_RESULTS_PER_QUERY", "10"))
 MAX_RESULTS_FILTERED = int(os.getenv("MAX_RESULTS_FILTERED", "3"))
+MAX_CHARACTERS_PER_PAGE = int(os.getenv("MAX_CHARACTERS_PER_PAGE", "3000"))
 
 # Scraper configuration
 USE_PLAYWRIGHT = os.getenv("USE_PLAYWRIGHT", "true").lower() == "true"
@@ -19,6 +20,7 @@ REWRITER_LLM_MODEL = os.getenv("REWRITER_LLM_MODEL", "gpt-5-mini")
 REWRITER_REASONING_EFFORT = os.getenv("REWRITER_REASONING_EFFORT", "medium")
 
 # Extractor (content extraction from web pages)
+USE_EXTRACTION = os.getenv("USE_EXTRACTION", "false").lower() == "true"
 EXTRACTOR_LLM_MODEL = os.getenv("EXTRACTOR_LLM_MODEL", "gpt-5-mini")
 EXTRACTOR_REASONING_EFFORT = os.getenv("EXTRACTOR_REASONING_EFFORT", "low")
 

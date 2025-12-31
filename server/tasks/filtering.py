@@ -8,7 +8,11 @@ from server.utils.util import (
     create_llm_messages,
     parse_json_response,
 )
-from server.config import MAX_RESULTS_FILTERED, FILTER_LLM_MODEL, FILTER_REASONING_EFFORT
+from server.config import (
+    MAX_RESULTS_FILTERED,
+    FILTER_LLM_MODEL,
+    FILTER_REASONING_EFFORT,
+)
 from server.models import FilteredSearchResult, SearchResult, TitleFilterOutput
 from server.prompts import load_prompt
 from server.utils.url_filters import is_ad_or_tracking_url
