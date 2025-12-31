@@ -33,6 +33,7 @@ async def rewrite_queries_task(
     queries_executed: list[str],
     content_summary: str,
     stop_flag: dict[str, bool],
+    attempts: int = 0,
 ) -> tuple[RewriterOutput, bool]:
     """Rewrite search queries using LLM based on original query and content summary.
 
@@ -103,11 +104,13 @@ async def rewrite_queries_task(
         if content.upper() == "STOP":
             return RewriterOutput(action="stop"), False
 
-        # Parse queries from plain text (one per line)
-        queries = [
-            QueryWithFilter(query=q.strip(), time_filter=None, strategy=None)
-            for q in content.split("\n")
-            if q.strip() and not q.startswith("-")
-        ][:3]
+        if attempts > 0:
+            raise RuntimeError("Error parsing rewrite response")
 
-        return RewriterOutput(action="continue", queries=queries), False
+        return await rewrite_queries_task(
+            original_query=original_query,
+            queries_executed=queries_executed,
+            content_summary=content_summary,
+            stop_flag=stop_flag,
+            attempts=attempts + 1,
+        )
