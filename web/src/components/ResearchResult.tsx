@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ResearchResultProps {
   response: string;
@@ -87,6 +88,7 @@ export function ResearchResult({ response }: ResearchResultProps) {
         style={{ color: 'var(--text-primary)' }}
       >
         <Markdown
+          remarkPlugins={[remarkGfm]}
           components={{
             a: ({ ...props }) => (
               <a
@@ -212,6 +214,50 @@ export function ResearchResult({ response }: ResearchResultProps) {
                 {...props}
                 className="my-6"
                 style={{ borderColor: 'var(--border-subtle)' }}
+              />
+            ),
+            table: ({ ...props }) => (
+              <div className="my-4 overflow-x-auto">
+                <table
+                  {...props}
+                  className="min-w-full border-collapse"
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    borderColor: 'var(--border-subtle)',
+                  }}
+                />
+              </div>
+            ),
+            thead: ({ ...props }) => (
+              <thead
+                {...props}
+                style={{
+                  background: 'var(--bg-secondary)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                }}
+              />
+            ),
+            tbody: ({ ...props }) => (
+              <tbody {...props} style={{ color: 'var(--text-secondary)' }} />
+            ),
+            tr: ({ ...props }) => (
+              <tr
+                {...props}
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              />
+            ),
+            th: ({ ...props }) => (
+              <th
+                {...props}
+                className="px-4 py-2 text-left text-sm font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              />
+            ),
+            td: ({ ...props }) => (
+              <td
+                {...props}
+                className="px-4 py-2 text-sm"
+                style={{ color: 'var(--text-secondary)' }}
               />
             ),
           }}
